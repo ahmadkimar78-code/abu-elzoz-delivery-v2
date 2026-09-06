@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  RESTAURANT
+  DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  DRIVER_ASSIGNED
+  PICKED_UP
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String   @unique
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // relations
+  restaurant   Restaurant?
+  driver       Driver?
+  addresses    Address[]
+  orders       Order[]   @relation("CustomerOrders")
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  label     String
+  street    String
+  city      String
+  lat       Float
+  lng       Float
+  isDefault Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+  orders    Order[]
+}
+
+model Restaurant {
+  id          String   @id @default(uuid())
+  ownerId     String   @unique
+  name        String
+  description String?
+  logoUrl     String?
+  city        String
+  lat         Float
+  lng         Float
+  isOpen      Boolean  @default(true)
+  rating      Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  owner       User     @relation(fields: [ownerId], references: [id])
+  menuItems   MenuItem[]
+  orders      Order[]
+
+  @@index([city, isOpen])
+}
+
+model MenuItem {
+  id           String   @id @default(uuid())
+  restaurantId String
+  name         String
+  description  String?
+  price        Decimal  @db.Decimal(10, 2)
+  imageUrl     String?
+  isAvailable  Boolean  @default(true)
+  category     String?
+
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id])
+  orderItems   OrderItem[]
+}
+
+model Driver {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  isAvailable  Boolean  @default(false)
+  lastLat      Float?
+  lastLng      Float?
+  vehicleType  String?
+  rating       Float    @default(0)
+
+  user         User     @relation(fields: [userId], references: [id])
+  orders       Order[]
+
+  @@index([isAvailable])
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  customerId    String
+  restaurantId  String
+  addressId     String
+  driverId      String?
+  status        OrderStatus @default(PENDING)
+  subtotal      Decimal     @db.Decimal(10, 2)
+  deliveryFee   Decimal     @db.Decimal(10, 2) @default(0)
+  total         Decimal     @db.Decimal(10, 2)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  customer      User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id])
+  address       Address     @relation(fields: [addressId], references: [id])
+  driver        Driver?     @relation(fields: [driverId], references: [id])
+  items         OrderItem[]
+  statusLogs    OrderStatusLog[]
+
+  @@index([customerId, createdAt])
+  @@index([status])
+  @@index([driverId])
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int
+  price      Decimal  @db.Decimal(10, 2)
+
+  order      Order    @relation(fields: [orderId], references: [id])
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+model OrderStatusLog {
+  id        String      @id @default(uuid())
+  orderId   String
+  status    OrderStatus
+  createdAt DateTime    @default(now())
+
+  order     Order       @relation(fields: [orderId], references: [id])
+}
