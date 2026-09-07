@@ -8,6 +8,8 @@ COPY package.json package-lock.json* ./
 COPY backend/package.json ./backend/package.json
 COPY shared ./shared
 RUN npm install --workspace=backend --workspace=shared --include-workspace-root
+# لازم نصرّف shared لـ JS الأول -- Node مش بيقدر يشغّل TypeScript خام وقت الإنتاج
+RUN npm run build --workspace=@abuelzoz/shared
 COPY backend ./backend
 RUN npx prisma generate --schema=./backend/prisma/schema.prisma
 RUN npm run build --workspace=backend
@@ -18,8 +20,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 COPY backend/package.json ./backend/package.json
-COPY shared ./shared
+COPY shared/package.json ./shared/package.json
 RUN npm install --workspace=backend --workspace=shared --omit=dev --include-workspace-root
+COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY backend/prisma ./backend/prisma
 RUN npx prisma generate --schema=./backend/prisma/schema.prisma
