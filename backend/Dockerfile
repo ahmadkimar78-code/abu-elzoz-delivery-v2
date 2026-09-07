@@ -4,6 +4,7 @@
 # ---- مرحلة البناء: فيها devDependencies وأدوات الـ build بس ----
 FROM node:20-alpine AS builder
 WORKDIR /app
+RUN apk add --no-cache openssl
 COPY package.json package-lock.json* ./
 COPY backend/package.json ./backend/package.json
 COPY shared ./shared
@@ -17,6 +18,7 @@ RUN npm run build --workspace=backend
 # ---- مرحلة الإنتاج: production dependencies بس، صورة أصغر بكتير ----
 FROM node:20-alpine AS production
 WORKDIR /app
+RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 COPY backend/package.json ./backend/package.json
