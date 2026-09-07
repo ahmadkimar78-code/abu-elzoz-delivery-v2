@@ -26,9 +26,9 @@ export async function createOrder(input: CreateOrderInput) {
     throw new AppError("Invalid delivery address", 400);
   }
 
-  const priceMap = new Map(menuItems.map((m) => [m.id, Number(m.price)]));
+  const priceMap = new Map(menuItems.map((m): [string, number] => [m.id, Number(m.price)]));
   const subtotal = input.items.reduce(
-    (sum, item) => sum + priceMap.get(item.menuItemId)! * item.quantity,
+    (sum: number, item) => sum + priceMap.get(item.menuItemId)! * item.quantity,
     0
   );
   // NOTE: رسم توصيل ثابت مبدئيًا ومتحكم فيه بمتغير بيئة (DELIVERY_BASE_FEE) بدل ما يبقى
